@@ -1,0 +1,541 @@
+swagger: '2.0'
+info:
+  title: Bytemark VM API
+  description: Manages Bytemark VMs
+  version: "1.0.0"
+  termsOfService: https://www.bytemark.co.uk/terms
+host: uk0.bigv.io
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  UserSecurity:
+    type: apiKey
+    in: header
+    name: Authorization
+security:
+  - UserSecurity: []
+parameters:
+  user_id:
+    name: user_id
+    type: integer
+    in: path
+    required: true
+  account_id:
+    name: account_id
+    type: integer
+    in: path
+    description: Account ID to use
+    required: true
+  group_id:
+    name: group_id
+    type: integer
+    in: path
+    required: true
+  vm_id:
+    name: vm_id
+    type: integer
+    in: path
+    required: true
+  virtual_machine:
+    name: virtual_machine
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/VirtualMachineCombined'
+  disc_id:
+    name: disc_id
+    type: integer
+    in: path
+    required: true
+  disc:
+    name: disc
+    in: body
+    required: true
+    schema:
+      $ref: '#/definitions/Disc'      
+  purge:
+    name: purge
+    type: boolean
+    in: query
+    required: false
+  include_deleted:
+    name: include_deleted
+    type: boolean
+    in: query
+    required: false
+paths:
+  # Definitions
+  /definitions:
+    get:
+      operationId: getDefinitions
+      summary: Returns an array of constants that are used when creating new VMs
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Definition'
+        default:
+          description: Unexpected error
+  # Users
+  /users:
+    get:
+      operationId: getUsers
+      summary: Returns a list of users for the account
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+        default:
+          description: Unexpected error
+  /users/{user_id}:
+    parameters:
+      - $ref: '#/parameters/user_id'      
+    get:
+      summary: Return the user that matches the specified user id
+      operationId: getUserByUserId
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/User'
+        404:
+          description: User not found
+        default:
+          description: Unexpected error
+    put:
+      summary: Overwrites the SSH keys associated with the user account
+      operationId: updateSshKeys
+      parameters:
+        - name: ssh_key
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SSHKey'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/User'
+        404:
+          description: User not found
+        default:
+          description: Unexpected error
+  # Groups
+  /groups:
+    get:
+      operationId: getGroups
+      summary: Returns a list of groups on the account
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Group'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}/groups:
+    post:
+      operationId: createGroup
+      summary: Create a new group
+      parameters:
+        - $ref: '#/parameters/account_id'
+        - name: group
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Group'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Group'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}/groups/{group_id}:
+    parameters:
+      - $ref: '#/parameters/account_id'
+      - $ref: '#/parameters/group_id'
+    get:
+      operationId: getGroupByGroupId
+      summary: Return the group for the specified group ID
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Group'
+        default:
+          description: Unexpected error
+    put:
+      operationId: updateGroup
+      summary: Change the name of the group
+      parameters:
+        - name: group
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Group'
+      respones:
+        # BUG: Changes the group name but doesn't get a response from the service
+        200:
+          schema:
+            $ref: '#/definitions/Group'
+        default:
+          description: Unexpected error
+    delete:
+      operationId: deleteGroup
+      summary: Delete the group with the specified group ID
+      reponses:
+        # BUG: Works, but no response from service
+        204:
+          description: Group deleted successfully
+        default:
+          description: Unexpected error
+  # Virtual Machines
+  /virtual_machines:
+    get:
+      operationId: getVirtualMachines
+      summary: List all virtual machines on the account or for a specific group ID
+      parameters:
+        - $ref: '#/parameters/include_deleted'
+        - name: group_id
+          type: integer
+          in: query
+          required: false
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/VirtualMachine'
+        default:
+          description: Unexpected error
+  /virtual_machines/{vm_id}:
+    get:
+      operationId: getVirtualMachineById
+      summary: Returns the virtual machine that matches the specified ID
+      parameters:
+        - $ref: '#/parameters/vm_id'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/VirtualMachine'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}/groups/{group_id}/vm_create:
+    post:
+      operationId: createVirtualMachine
+      summary: Create a new virtual machine
+      parameters:
+        - $ref: '#/parameters/account_id'
+        - $ref: '#/parameters/group_id'
+        - $ref: '#/parameters/virtual_machine'
+      responses:
+        202:
+          schema:
+            $ref: '#/definitions/VirtualMachineCombined'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}/groups/{group_id}/virtual_machines/{vm_id}:
+    parameters:
+      - $ref: '#/parameters/account_id'
+      - $ref: '#/parameters/group_id'
+      - $ref: '#/parameters/vm_id'      
+    put:
+      operationId: updateVirtualMachine
+      summary: Updates the propeties of an existing virtual machine
+      parameters:
+        - $ref: '#/parameters/virtual_machine'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/VirtualMachine'
+        default:
+          description: Unexpected error
+    delete:
+      operationId: deleteVirtualMachine
+      summary: Delete a virtual machine
+      parameters:
+        - $ref: '#/parameters/purge'
+      responses:
+        204:
+          description: VM Deleted Successfully
+        default:
+          description: Unexpected error
+  # Signaling
+  /accounts/{account_id}/groups/{group_id}/virtual_machines/{vm_id}/signal:
+    post:
+      operationId: signalVirtualMachine
+      summary: Sends a singal to a VM to either reset it, power it down or send a key sequence
+      parameters:
+        - $ref: '#/parameters/account_id'
+        - $ref: '#/parameters/group_id'
+        - $ref: '#/parameters/vm_id'
+        - name: signal
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Signal'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Signal'
+        default:
+          description: Unexpected error
+  # Accounts
+  /accounts:
+    get:
+      operationId: getAccounts
+      summary: Get all accounts that the user has access to
+      parameters:
+        - $ref: '#/parameters/include_deleted'
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Account'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}:
+    get:
+      operationId: getAccountByAccountId
+      summary: Returns the account for the specified account ID
+      parameters:
+        - $ref: '#/parameters/account_id'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Account'
+        default:
+          description: Unexpected error
+  # Discs
+  /discs:
+    get:
+      operationId: getDiscs
+      summary: Returns discs for all virtual machines or a specific virtual machine
+      parameters:
+        - name: vm_id
+          type: integer
+          in: query
+          required: false
+      responses:
+        200:
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Disc'
+        default:
+          description: Unexpected error
+  /discs/{disc_id}:
+    get:
+      operationId: getDiscByDiscId
+      summary: Returns the disc for the specified disc ID
+      parameters:
+        - $ref: '#/parameters/disc_id'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Disc'
+        default:
+          description: Unexpected error
+  /accounts/{account_id}/groups/{group_id}/virtual_machines/{vm_id}/discs:
+    post:
+      operationId: createDisc
+      summary: Creates a new disc
+      parameters:
+        - $ref: '#/parameters/account_id'
+        - $ref: '#/parameters/group_id'
+        - $ref: '#/parameters/vm_id'
+        - $ref: '#/parameters/disc'
+    responses:
+      200:
+        schema:
+          $ref: '#/definitions/Disc'
+      default:
+        description: Unexpected error
+  /accounts/{account_id}/groups/{group_id}/virtual_machines/{vm_id}/discs/{disc_id}:
+    parameters:
+      - $ref: '#/parameters/account_id'
+      - $ref: '#/parameters/group_id'
+      - $ref: '#/parameters/vm_id'
+      - $ref: '#/parameters/disc_id'      
+    put:
+      operationId: updateDisc
+      summary: Modify a disc
+      parameters:
+        - $ref: '#/parameters/disc'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Disc'
+        default:
+          description: Unexpected error
+    delete:
+      operationId: deleteDisc
+      summary: Deletes a disc
+      parameters:
+        - $ref: '#/parameters/purge'
+      responses:
+        204:
+          description: Disc deleted successfully
+        default:
+          description: Unexpected error
+definitions:
+  Definition:
+    type: object
+    properties:
+      id:
+        type: string
+        readOnly: true
+      data:
+        type: string
+        readOnly: true
+  User:
+    type: object
+    properties:
+      authorized_keys:
+        type: string
+      id:
+        type: integer
+        readOnly: true
+      type:
+        type: string
+        readOnly: true
+      username:
+        type: string
+        readOnly: true
+  Account:
+    type: object
+    properties:
+      id:
+        type: integer
+        readOnly: true
+      name:
+        type: string
+        readOnly: true
+      suspended:
+        type: boolean
+        readOnly: true
+      type:
+        type: string
+        readOnly: true
+  Group:
+    type: object
+    properties:
+      account_id:
+        type: integer
+        readOnly: true
+      id:
+        type: integer
+        readOnly: true
+      name:
+        type: string
+      type:
+        type: string
+        readOnly: true
+  VirtualMachine:
+    type: object
+    properties:
+      type:
+        type: string
+        readOnly: true
+      autoreboot_on:
+        type: boolean
+      cdrom_url:
+        type: string
+      cores:
+        type: integer
+      group_id:
+        type: integer
+      id:
+        type: integer
+        readOnly: true
+      management_address:
+        type: string
+      memory:
+        type: integer
+      name:
+        type: string
+      power_on:
+        type: boolean
+      keymap:
+        type: string
+      deleted:
+        type: boolean
+        readOnly: true
+      hostname:
+        type: string
+        readOnly: true
+      head:
+        type: string
+        readOnly: true
+      hardware_profile:
+        type: string
+      hardware_profile_locked:
+        type: boolean
+      zone_name:
+        type: string
+      last_imaged_with:
+        type: string
+        readOnly: true
+  Disc:
+    type: object
+    properties:
+      type:
+        type: string
+        readOnly: true
+      id:
+        type: integer
+        readOnly: true
+      label:
+        type: string
+      size:
+        type: integer
+      virtual_machine_id:
+        type: integer
+      storage_pool:
+        type: string
+      storage_grade:
+        type: string
+  Reimage:
+    type: object
+    properties:
+      distribution:
+        type: string
+      root_password:
+        type: string
+  IPS:
+    type: object
+    properties:
+      ipv4:
+        type: string
+      ipv6:
+        type: string    
+  VirtualMachineCombined:
+    type: object
+    properties:
+      virtual_machine:
+        $ref: '#/definitions/VirtualMachine'
+      discs:
+        type: array
+        items:
+          $ref: '#/definitions/Disc'
+      reimage:
+        $ref: '#/definitions/Reimage'
+      ips:
+        $ref: '#/definitions/IPS'
+  SSHKey:
+    type: object
+    properties:
+      authorized_keys:
+        type: string
+  Signal:
+    type: object
+    properties:
+      signal:
+        type: string
+      data:
+        type: string
